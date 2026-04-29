@@ -18,42 +18,21 @@ pipeline {
         stage('Deploy to VMSS') {
             steps {
                 sh '''
-                    # No login credentials needed — VM identity handles it
                     az login --identity
 
-                    echo "Triggering deploy.sh on all VMSS instances..."
-
-                    az vmss run-command invoke \
+                    echo "Fetching all VMSS instance IDs..."
+                    INSTANCE_IDS=$(az vmss list-instances \
                       --resource-group ${RG} \
                       --name ${VMSS} \
-                      --command-id RunShellScript \
-                      --scripts "bash /opt/deploy/deploy.sh" \
-                      --instance-id "*"
-                '''
-            }
-        }
+                      --query "[].instanceId" \
+                      --output tsv)
 
-        stage('Health Check') {
-            steps {
-                sh '''
-                    sleep 15
-                    echo "VMSS instance states:"
-                    az vmss list-instances \
-                      --resource-group ${RG} \
-                      --name ${VMSS} \
-                      --query "[].{Instance:name, State:provisioningState}" \
-                      --output table
-                '''
-            }
-        }
-    }
+                    echo "Instances found: $INSTANCE_IDS"
 
-    post {
-        success {
-            echo "Build #${BUILD_NUMBER} deployed successfully to all VMSS instances."
-        }
-        failure {
-            echo "Build #${BUILD_NUMBER} failed. SSH into an instance and run: sudo bash /opt/deploy/deploy.sh"
-        }
-    }
-}
+                    for ID in $INSTANCE_IDS; do
+                        echo "Deploying to instance $ID ..."
+                        az vmss run-command invoke \
+                          --resource-group ${RG} \
+                          --name ${VMSS} \
+                          --command-id RunShellScript \
+                          --scripts "bash /opt/deploy/deploy.sh" \
