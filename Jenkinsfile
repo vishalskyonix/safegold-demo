@@ -36,3 +36,34 @@ pipeline {
                           --name ${VMSS} \
                           --command-id RunShellScript \
                           --scripts "bash /opt/deploy/deploy.sh" \
+                          --instance-id $ID
+                        echo "Instance $ID done."
+                    done
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                    sleep 15
+                    echo "VMSS instance states:"
+                    az vmss list-instances \
+                      --resource-group ${RG} \
+                      --name ${VMSS} \
+                      --query "[].{Instance:name, State:provisioningState}" \
+                      --output table
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build #${BUILD_NUMBER} deployed successfully to all VMSS instances."
+        }
+        failure {
+            echo "Build #${BUILD_NUMBER} failed. SSH into an instance and run: sudo bash /opt/deploy/deploy.sh"
+        }
+    }
+}
