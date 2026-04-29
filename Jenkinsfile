@@ -4,6 +4,7 @@ pipeline {
     environment {
         RG   = 'uat-uae-rg'
         VMSS = 'demo-1-vmss'
+        REPO = 'https://github.com/vishalskyonix/safegold-demo.git'
     }
 
     stages {
@@ -35,7 +36,13 @@ pipeline {
                           --resource-group ${RG} \
                           --name ${VMSS} \
                           --command-id RunShellScript \
-                          --scripts "bash /opt/deploy/deploy.sh" \
+                          --scripts "
+                            cd /tmp
+                            rm -rf safegold-demo
+                            git clone https://github.com/vishalskyonix/safegold-demo.git
+                            chmod +x /tmp/safegold-demo/deploy.sh
+                            bash /tmp/safegold-demo/deploy.sh
+                          " \
                           --instance-id $ID
                         echo "Instance $ID done."
                     done
@@ -63,7 +70,7 @@ pipeline {
             echo "Build #${BUILD_NUMBER} deployed successfully to all VMSS instances."
         }
         failure {
-            echo "Build #${BUILD_NUMBER} failed. SSH into an instance and run: sudo bash /opt/deploy/deploy.sh"
+            echo "Build #${BUILD_NUMBER} failed."
         }
     }
 }
