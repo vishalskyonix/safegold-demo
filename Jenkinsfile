@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         RG   = 'uat-uae-rg'
-        VMSS = 'myAppVMSS'
+        VMSS = 'demo-1-vmss'
     }
 
     stages {
